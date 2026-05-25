@@ -37,6 +37,7 @@ export default function DropZone({ onFiles }) {
       <div style={{ color: "#2a3a4d", fontSize: 11 }}>
         PNG · JPG · WEBP · MP3 · MP4 · WAV · PDF · TXT · CSV · JSON and more
       </div>
+      <div style={{ color: "#1e2d3d", fontSize: 10.5, marginTop: 6 }}>Max file size: 500MB</div>
     </div>
   );
 }

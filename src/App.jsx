@@ -43,17 +43,40 @@ export default function App() {
   }, [history, historyLoaded]);
 
   const handleFiles = useCallback((fileList) => {
+    const MAX_MB = 500;
+    const MAX_BYTES = MAX_MB * 1024 * 1024;
+
     const newItems = Array.from(fileList).map((file) => {
       const type = detectType(file);
+
+      if (file.size > MAX_BYTES) {
+        return {
+          id: `${Date.now()}-${Math.random()}`,
+          file, type,
+          targetFmt: null,
+          status: "error",
+          error: `File too large — max ${MAX_MB}MB. This file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`,
+          progress: 0, downloadUrl: null, downloadName: null,
+        };
+      }
+
+      if (!type) {
+        return {
+          id: `${Date.now()}-${Math.random()}`,
+          file, type: null, targetFmt: null,
+          status: "error",
+          error: `Sorry, .${file.name.split(".").pop()} files aren't supported yet`,
+          progress: 0, downloadUrl: null, downloadName: null,
+        };
+      }
+
       return {
         id: `${Date.now()}-${Math.random()}`,
         file, type,
-        targetFmt: type ? FORMAT_MAP[type].outputs[0] : null,
-        status: type ? "idle" : "error",
-        error: type ? null : `Sorry, .${file.name.split(".").pop()} files aren't supported yet`,
-        progress: 0,
-        downloadUrl: null,
-        downloadName: null,
+        targetFmt: FORMAT_MAP[type].outputs[0],
+        status: "idle",
+        error: null,
+        progress: 0, downloadUrl: null, downloadName: null,
       };
     });
     setFiles((f) => [...f, ...newItems]);
