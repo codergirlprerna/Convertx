@@ -143,7 +143,7 @@ function ShareModal({ file, onClose }) {
         <div style={{
           padding: "12px 14px", borderRadius: 12,
           background: "var(--accent-dim)", border: "1px solid rgba(0,212,170,0.2)",
-          marginBottom: 16, display: "flex", alignItems: "center", gap: 10,
+          marginBottom: 12, display: "flex", alignItems: "center", gap: 10,
         }}>
           <div style={{ fontSize: 22 }}>
             {file.type === "image" ? "🖼" : file.type === "audio" ? "🎵" : file.type === "video" ? "🎬" : "📄"}
@@ -153,10 +153,17 @@ function ShareModal({ file, onClose }) {
               {file.downloadName}
             </div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-              {file.name} → <span style={{ color: "var(--accent)" }}>{file.to}</span>
+              {file.name} → <span style={{ color: "var(--accent)", fontWeight: 700 }}>{file.to}</span>
             </div>
           </div>
         </div>
+
+        {/* WhatsApp image warning */}
+        {file.type === "image" && (
+          <div style={{ marginBottom: 12, padding: "9px 12px", borderRadius: 9, background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.2)", fontSize: 11, color: "#f59e0b", lineHeight: 1.55 }}>
+            ⚠ <strong>WhatsApp & Telegram always re-compress images to JPEG</strong> — your {file.to} format won't be preserved. To keep the original format, use <strong>Download</strong> and share the file manually, or send via <strong>Gmail</strong> as an attachment.
+          </div>
+        )}
 
         {/* Mobile: native share button (shares actual file) */}
         {isMobile && (
