@@ -11,7 +11,8 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "@ffmpeg/ffmpeg": "^0.12.6",
-    "@ffmpeg/util": "^0.12.1"
+    "@ffmpeg/util": "^0.12.1",
+    "jszip": "^3.10.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FORMAT_MAP } from "../constants";
 
 function Preview({ item }) {
@@ -156,15 +156,19 @@ export default function FileCard({ item, onRemove, onFormatChange, onConvert, on
 
   // Load original image dimensions
   const isImageType = item.type === "image";
-  if (isImageType && !imgDimensions.w && item.file) {
+
+  // Load image dimensions only once using useEffect (not on every render)
+  useEffect(() => {
+    if (!isImageType || imgDimensions.w || !item.file) return;
     const url = URL.createObjectURL(item.file);
     const img = new Image();
     img.onload = () => {
       setImgDimensions({ w: img.width, h: img.height });
       URL.revokeObjectURL(url);
     };
+    img.onerror = () => URL.revokeObjectURL(url);
     img.src = url;
-  }
+  }, [item.file, isImageType]);
 
   return (
     <div style={{
