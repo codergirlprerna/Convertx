@@ -152,3 +152,28 @@ a { font-family: var(--font-body); }
   .hero-title { font-size: 42px !important; }
   .format-grid { grid-template-columns: 1fr 1fr 1fr 1fr !important; }
 }
+
+/* ── Responsive Header ── */
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Mobile: stack if needed, but keep on one line as much as possible */
+@media (max-width: 380px) {
+  .header-inner {
+    gap: 8px;
+  }
+  .tab-btn {
+    padding: 5px 8px !important;
+    font-size: 10px !important;
+  }
+  .theme-btn {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 13px !important;
+  }
+}
