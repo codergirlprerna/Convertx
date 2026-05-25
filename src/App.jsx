@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { downloadAsZip } from "./utils/zipDownload";
 import "./index.css";
 import { FORMAT_MAP } from "./constants";
 import { detectType } from "./utils/detectType";
@@ -86,7 +87,7 @@ export default function App() {
   const setFormat = (id, fmt) => setFiles((f) => f.map((x) => x.id === id ? { ...x, targetFmt: fmt } : x));
   const updateFile = (id, updates) => setFiles((f) => f.map((x) => x.id === id ? { ...x, ...updates } : x));
 
-  const convertFile = async (id) => {
+  const convertFile = async (id, imgOptions = {}) => {
     const item = files.find((x) => x.id === id);
     if (!item) return;
     const fmt = item.targetFmt;
@@ -97,7 +98,7 @@ export default function App() {
       let blob, ext;
       if (item.type === "image") {
         updateFile(id, { progress: 30 });
-        blob = await convertImage(item.file, fmt);
+        blob = await convertImage(item.file, fmt, imgOptions);
         ext = fmt.toLowerCase() === "jpeg" ? "jpg" : fmt.toLowerCase();
         updateFile(id, { progress: 90 });
       } else if (item.type === "document") {
@@ -133,9 +134,21 @@ export default function App() {
   };
 
   const convertAll = () =>
-    files.filter((x) => x.status === "idle" && x.targetFmt).forEach((x) => convertFile(x.id));
+    files.filter((x) => x.status === "idle" && x.targetFmt).forEach((x) => convertFile(x.id, {}));
 
   const hasIdle = files.some((x) => x.status === "idle" && x.targetFmt);
+  const doneFiles = files.filter((x) => x.status === "done" && x.downloadUrl);
+
+  const downloadAllAsZip = async () => {
+    const toZip = await Promise.all(
+      doneFiles.map(async (item) => {
+        const res = await fetch(item.downloadUrl);
+        const blob = await res.blob();
+        return { blob, name: item.downloadName };
+      })
+    );
+    await downloadAsZip(toZip);
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", position: "relative", overflow: "hidden" }}>
@@ -261,6 +274,17 @@ export default function App() {
                     marginBottom: 6,
                   }}>
                     ⚡ Convert All Files
+                  </button>
+                )}
+                {doneFiles.length >= 2 && (
+                  <button className="convert-btn" onClick={downloadAllAsZip} style={{
+                    width: "100%", padding: "12px", borderRadius: 13, border: "1px solid rgba(129,140,248,0.3)",
+                    background: "rgba(129,140,248,0.08)",
+                    color: "#818cf8", fontWeight: 700, fontSize: 13,
+                    fontFamily: "var(--font-heading)", letterSpacing: "0.01em",
+                    cursor: "pointer", marginBottom: 6,
+                  }}>
+                    ↓ Download All as ZIP ({doneFiles.length} files)
                   </button>
                 )}
                 {files.map((item) => (
