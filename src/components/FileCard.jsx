@@ -142,7 +142,7 @@ function ImageOptions({ options, onChange, originalWidth, originalHeight }) {
 }
 
 // ── FileCard ───────────────────────────────────────────────────────────────
-export default function FileCard({ item, onRemove, onFormatChange, onConvert }) {
+export default function FileCard({ item, onRemove, onFormatChange, onConvert, onShare }) {
   const cfg = FORMAT_MAP[item.type] || {};
   const progress = item.progress ?? 0;
   const [imgOptions, setImgOptions] = useState({ quality: 92, width: null, height: null });
@@ -287,7 +287,7 @@ export default function FileCard({ item, onRemove, onFormatChange, onConvert }) 
       {item.status === "done" && item.downloadUrl && (
         <>
           <Preview item={item} />
-          <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 2 }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 2, flexWrap: "wrap" }}>
             <a href={item.downloadUrl} download={item.downloadName} style={{
               padding: "10px 24px", borderRadius: 10, textDecoration: "none",
               background: "linear-gradient(135deg, #00d4aa, #00b894)",
@@ -297,6 +297,14 @@ export default function FileCard({ item, onRemove, onFormatChange, onConvert }) 
             }}>
               ↓ Download {item.targetFmt}
             </a>
+            <button onClick={() => onShare({ name: item.file.name, to: item.targetFmt })} style={{
+              padding: "10px 16px", borderRadius: 10, border: "1px solid var(--border2)",
+              background: "transparent", color: "var(--text-secondary)",
+              fontSize: 12, fontFamily: "var(--font-heading)", fontWeight: 600,
+              cursor: "pointer", transition: "all 0.15s",
+            }}>
+              Share ↗
+            </button>
             <div style={{ fontSize: 12, color: "#00d4aa", fontFamily: "var(--font-heading)", fontWeight: 500 }}>✓ Done</div>
           </div>
         </>
