@@ -50,7 +50,7 @@ export default function App() {
         file, type,
         targetFmt: type ? FORMAT_MAP[type].outputs[0] : null,
         status: type ? "idle" : "error",
-        error: type ? null : `Unsupported: .${file.name.split(".").pop()}`,
+        error: type ? null : `Sorry, .${file.name.split(".").pop()} files aren't supported yet`,
         progress: 0,
         downloadUrl: null,
         downloadName: null,
@@ -169,7 +169,7 @@ export default function App() {
                 color: tab === t ? "var(--text-primary)" : "var(--text-secondary)",
                 boxShadow: tab === t ? "0 1px 4px rgba(0,0,0,0.3)" : "none",
               }}>
-                {t === "convert" ? "⚡ Convert" : `History${history.length > 0 ? ` · ${history.length}` : ""}`}
+                {t === "convert" ? "Convert" : `History${history.length > 0 ? ` · ${history.length}` : ""}`}
               </button>
             ))}
           </div>

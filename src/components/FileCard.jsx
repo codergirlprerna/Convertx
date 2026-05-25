@@ -12,9 +12,25 @@ function Preview({ item }) {
   const isText  = ["txt","html","json","csv","md"].includes(ext);
 
   if (isImage) {
+    const isGif = ext === "gif";
+    const sourceWasImage = item.type === "image";
+    const isStaticGif = isGif && sourceWasImage;
     return (
-      <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.3)", maxHeight: 240, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <img src={downloadUrl} alt="preview" style={{ maxWidth: "100%", maxHeight: 240, objectFit: "contain", display: "block" }} />
+      <div>
+        <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.3)", maxHeight: 240, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <img src={downloadUrl} alt="preview" style={{ maxWidth: "100%", maxHeight: 240, objectFit: "contain", display: "block" }} />
+        </div>
+        {isStaticGif && (
+          <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.18)", display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <span style={{ fontSize: 14, flexShrink: 0 }}>💡</span>
+            <div>
+              <div style={{ fontSize: 11.5, color: "#f59e0b", fontFamily: "var(--font-heading)", fontWeight: 600, marginBottom: 2 }}>Static GIF</div>
+              <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                This GIF has no animation because the source was a still image. To get an <strong style={{ color: "#f59e0b" }}>animated GIF</strong>, upload a video file (MP4, WEBM, MOV) and convert it to GIF.
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -171,7 +187,7 @@ export default function FileCard({ item, onRemove, onFormatChange, onConvert }) 
       {item.status === "loading_ffmpeg" && (
         <div style={{ color: "#f59e0b", fontSize: 12, fontFamily: "var(--font-heading)", display: "flex", alignItems: "center", gap: 7 }}>
           <span style={{ animation: "spin-slow 1s linear infinite", display: "inline-block" }}>⚙</span>
-          Loading conversion engine (~30MB, first time only)…
+          Setting up video converter (one-time download, ~30MB)…
         </div>
       )}
 
@@ -200,14 +216,21 @@ export default function FileCard({ item, onRemove, onFormatChange, onConvert }) 
             }}>
               ↓ Download {item.targetFmt}
             </a>
-            <div style={{ fontSize: 12, color: "#00d4aa", fontFamily: "var(--font-heading)", fontWeight: 500 }}>✓ Converted</div>
+            <div style={{ fontSize: 12, color: "#00d4aa", fontFamily: "var(--font-heading)", fontWeight: 500 }}>✓ Done</div>
           </div>
         </>
       )}
 
       {/* Error */}
       {item.status === "error" && (
-        <div style={{ color: "#f43f5e", fontSize: 12, fontFamily: "var(--font-heading)" }}>⚠ {item.error}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ color: "#f43f5e", fontSize: 12, fontFamily: "var(--font-heading)" }}>⚠ {item.error}</div>
+          <button onClick={() => onConvert(item.id)} style={{
+            padding: "5px 14px", borderRadius: 8, border: "1px solid rgba(244,63,94,0.3)",
+            background: "rgba(244,63,94,0.08)", color: "#f43f5e",
+            fontSize: 11, fontFamily: "var(--font-heading)", fontWeight: 600, cursor: "pointer",
+          }}>Try Again</button>
+        </div>
       )}
     </div>
   );

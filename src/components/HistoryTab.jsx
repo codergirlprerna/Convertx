@@ -80,7 +80,7 @@ export default function HistoryTab({ history, onClear }) {
             background: "rgba(0,212,170,0.04)", border: "1px solid rgba(0,212,170,0.1)", textAlign: "center",
           }}>
             <div style={{ fontSize: 11, color: "#00d4aa", fontFamily: "var(--font-heading)", fontWeight: 600 }}>✓ History saved permanently in your browser</div>
-            <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginTop: 3 }}>Download links reset on page refresh — re-convert to download again</div>
+            <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginTop: 3 }}>To re-download a file, simply convert it again</div>
           </div>
         </div>
       )}
