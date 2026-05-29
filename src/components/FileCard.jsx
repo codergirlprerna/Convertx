@@ -76,7 +76,7 @@ function TextPreview({ url, ext }) {
 }
 
 // ── Image Options Panel ────────────────────────────────────────────────────
-function ImageOptions({ options, onChange, originalWidth, originalHeight }) {
+function ImageOptions({ options, onChange, originalWidth, originalHeight, targetFmt }) {
   const accent = "#00d4aa";
   return (
     <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(0,212,170,0.04)", border: "1px solid rgba(0,212,170,0.12)" }}>
@@ -117,24 +117,31 @@ function ImageOptions({ options, onChange, originalWidth, originalHeight }) {
           />
         </div>
       </div>
-      {/* Quality slider */}
-      <div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-          <label style={{ fontSize: 10.5, color: "var(--text-muted)", fontFamily: "var(--font-heading)" }}>Quality</label>
-          <span style={{ fontSize: 11, color: accent, fontFamily: "var(--font-heading)", fontWeight: 600 }}>{options.quality || 92}%</span>
+      {/* Quality slider — only for JPEG and WEBP */}
+      {(targetFmt === "JPEG" || targetFmt === "WEBP") && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+            <label style={{ fontSize: 10.5, color: "var(--text-muted)", fontFamily: "var(--font-heading)" }}>Quality</label>
+            <span style={{ fontSize: 11, color: accent, fontFamily: "var(--font-heading)", fontWeight: 600 }}>{options.quality || 85}%</span>
+          </div>
+          <input
+            type="range" min="10" max="100" step="1"
+            value={options.quality || 85}
+            onChange={e => onChange({ ...options, quality: parseInt(e.target.value) })}
+            style={{ width: "100%", accentColor: accent, cursor: "pointer" }}
+          />
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
+            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Smaller file</span>
+            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Best quality</span>
+          </div>
         </div>
-        <input
-          type="range" min="10" max="100" step="1"
-          value={options.quality || 92}
-          onChange={e => onChange({ ...options, quality: parseInt(e.target.value) })}
-          style={{ width: "100%", accentColor: accent, cursor: "pointer" }}
-        />
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
-          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Smaller file</span>
-          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Best quality</span>
+      )}
+      {(targetFmt === "PNG" || targetFmt === "GIF" || targetFmt === "BMP") && (
+        <div style={{ fontSize: 10.5, color: "var(--text-muted)", padding: "6px 10px", borderRadius: 7, background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+          💡 Quality slider not available for {targetFmt} — this format uses lossless compression. File size depends on image content.
         </div>
-      </div>
-      <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 8 }}>
+      )}
+      <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>
         Leave width/height empty to keep original size. Aspect ratio is preserved automatically.
       </div>
     </div>
@@ -256,6 +263,7 @@ export default function FileCard({ item, onRemove, onFormatChange, onConvert, on
           onChange={setImgOptions}
           originalWidth={imgDimensions.w}
           originalHeight={imgDimensions.h}
+          targetFmt={item.targetFmt}
         />
       )}
 
@@ -291,6 +299,32 @@ export default function FileCard({ item, onRemove, onFormatChange, onConvert, on
       {item.status === "done" && item.downloadUrl && (
         <>
           <Preview item={item} />
+          {/* Size comparison */}
+          {item.sizeInfo && (
+            <div style={{
+              padding: "8px 12px", borderRadius: 9, marginBottom: 4,
+              background: item.sizeInfo.savedPercent > 0
+                ? "rgba(0,212,170,0.06)" : "rgba(245,158,11,0.06)",
+              border: `1px solid ${item.sizeInfo.savedPercent > 0 ? "rgba(0,212,170,0.2)" : "rgba(245,158,11,0.2)"}`,
+              display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+            }}>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-heading)" }}>
+                {(item.sizeInfo.originalSize / 1024).toFixed(1)} KB
+              </span>
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>→</span>
+              <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "var(--font-heading)", color: item.sizeInfo.savedPercent > 0 ? "#00d4aa" : "#f59e0b" }}>
+                {(item.sizeInfo.outputSize / 1024).toFixed(1)} KB
+              </span>
+              <span style={{ fontSize: 11, fontFamily: "var(--font-heading)", fontWeight: 600,
+                color: item.sizeInfo.savedPercent > 0 ? "#00d4aa" : "#f59e0b" }}>
+                {item.sizeInfo.savedPercent > 0
+                  ? `↓ ${item.sizeInfo.savedPercent}% smaller`
+                  : item.sizeInfo.savedPercent === 0
+                  ? "Same size"
+                  : `↑ ${Math.abs(item.sizeInfo.savedPercent)}% larger — try reducing quality or switching to WEBP`}
+              </span>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 2, flexWrap: "wrap" }}>
             <a href={item.downloadUrl} download={item.downloadName} style={{
               padding: "10px 24px", borderRadius: 10, textDecoration: "none",

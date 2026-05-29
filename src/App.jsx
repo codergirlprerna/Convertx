@@ -285,11 +285,14 @@ export default function App() {
     const isMedia = item.type === "audio" || item.type === "video";
     updateFile(id, { status: isMedia ? "loading_ffmpeg" : "converting", progress: 5 });
     try {
-      let blob, ext;
+      let blob, ext, imgSizeInfo = null;
       if (item.type === "image") {
         updateFile(id, { progress: 30 });
-        blob = await convertImage(item.file, fmt, imgOptions);
+        const imgResult = await convertImage(item.file, fmt, imgOptions);
+        blob = imgResult.blob;
         ext = fmt.toLowerCase() === "jpeg" ? "jpg" : fmt.toLowerCase();
+        // Store size info for display
+        imgSizeInfo = { originalSize: imgResult.originalSize, outputSize: imgResult.outputSize, savedPercent: imgResult.savedPercent };
         updateFile(id, { progress: 90 });
       } else if (item.type === "document") {
         updateFile(id, { progress: 40 });
@@ -304,7 +307,7 @@ export default function App() {
       const url = URL.createObjectURL(blob);
       const baseName = item.file.name.replace(/\.[^.]+$/, "");
       const downloadName = `${baseName}_convertx.${ext}`;
-      updateFile(id, { status: "done", progress: 100, downloadUrl: url, downloadName });
+      updateFile(id, { status: "done", progress: 100, downloadUrl: url, downloadName, sizeInfo: imgSizeInfo });
       setHistory((h) => [{
         id: `h-${Date.now()}`, name: item.file.name, to: fmt,
         size: `${(item.file.size / 1024).toFixed(1)} KB`, type: item.type,
