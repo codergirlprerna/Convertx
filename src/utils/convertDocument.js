@@ -1,5 +1,43 @@
+async function extractPDFText(file) {
+  const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  // Use legacy build with bundled worker — avoids COEP/CDN issues
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/legacy/build/pdf.worker.mjs",
+    import.meta.url
+  ).toString();
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let fullText = "";
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items.map((item) => item.str).join(" ");
+    fullText += `\n--- Page ${i} ---\n${pageText}\n`;
+  }
+
+  const trimmed = fullText.trim();
+  if (!trimmed) {
+    throw new Error("No text found in PDF. This file may be scanned or image-based.");
+  }
+  return trimmed;
+}
+
 export async function convertDocument(file, targetFmt) {
-  const text = await file.text();
+  const isPDF = file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf";
+  let text;
+
+  if (isPDF) {
+    try {
+      text = await extractPDFText(file);
+    } catch (err) {
+      throw new Error(err.message || "Could not extract text from PDF. The file may be scanned/image-based or encrypted.");
+    }
+  } else {
+    text = await file.text();
+  }
+
   let content = "";
   let mime = "text/plain";
   let ext = "txt";
@@ -7,8 +45,7 @@ export async function convertDocument(file, targetFmt) {
   switch (targetFmt) {
     case "TXT":
       content = text.replace(/<[^>]+>/g, "").replace(/\n{3,}/g, "\n\n").trim();
-      mime = "text/plain";
-      ext = "txt";
+      mime = "text/plain"; ext = "txt";
       break;
 
     case "HTML": {
@@ -31,21 +68,15 @@ export async function convertDocument(file, targetFmt) {
   <pre>${escaped}</pre>
 </body>
 </html>`;
-      mime = "text/html";
-      ext = "html";
+      mime = "text/html"; ext = "html";
       break;
     }
 
     case "JSON": {
       const lines = text.split("\n").filter(Boolean);
-      const obj = {
-        source: file.name,
-        converted_at: new Date().toISOString(),
-        lines,
-      };
+      const obj = { source: file.name, converted_at: new Date().toISOString(), lines };
       content = JSON.stringify(obj, null, 2);
-      mime = "application/json";
-      ext = "json";
+      mime = "application/json"; ext = "json";
       break;
     }
 
@@ -56,16 +87,14 @@ export async function convertDocument(file, targetFmt) {
         rows.push(`${i + 1},"${line.replace(/"/g, '""')}"`);
       });
       content = rows.join("\n");
-      mime = "text/csv";
-      ext = "csv";
+      mime = "text/csv"; ext = "csv";
       break;
     }
 
     case "MARKDOWN": {
       const baseName = file.name.replace(/\.[^.]+$/, "");
       content = `# ${baseName}\n\n> Converted from \`${file.name}\` on ${new Date().toLocaleDateString()}\n\n---\n\n${text}`;
-      mime = "text/markdown";
-      ext = "md";
+      mime = "text/markdown"; ext = "md";
       break;
     }
 

@@ -5,10 +5,12 @@ export const FORMAT_MAP = {
     color: "#00d4aa",
     accepts: [
       "image/png", "image/jpeg", "image/webp",
-      "image/gif", "image/bmp", "image/tiff", "image/svg+xml",
+      "image/gif", "image/bmp", "image/svg+xml",
+      // NOTE: TIFF removed — browser Canvas cannot load TIFF files
     ],
-    exts: ["png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "svg"],
-    outputs: ["PNG", "JPEG", "WEBP", "GIF", "BMP"],
+    exts: ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg"],
+    outputs: ["PNG", "JPEG", "WEBP", "GIF"],
+    // NOTE: BMP removed from outputs — Canvas API does not support image/bmp encoding
   },
   audio: {
     label: "Audio",
@@ -19,7 +21,7 @@ export const FORMAT_MAP = {
       "audio/flac", "audio/aac", "audio/mp4", "audio/x-m4a",
     ],
     exts: ["mp3", "wav", "ogg", "flac", "aac", "m4a"],
-    outputs: ["MP3", "WAV", "OGG", "AAC"],
+    outputs: ["MP3", "WAV", "OGG", "AAC", "FLAC"],
   },
   video: {
     label: "Video",

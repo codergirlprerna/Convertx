@@ -22,13 +22,11 @@ async function getFFmpeg(onProgress) {
 
   ffmpegLoading = true;
   ffmpeg = new FFmpeg();
-
   ffmpeg.on("progress", ({ progress }) => {
     if (onProgress) onProgress(Math.round(progress * 100));
   });
 
   const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.4/dist/esm";
-
   try {
     await ffmpeg.load({
       coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
@@ -38,7 +36,6 @@ async function getFFmpeg(onProgress) {
     ffmpegLoading = false;
     return ffmpeg;
   } catch (err) {
-    // Reset state so user can retry
     ffmpegLoaded = false;
     ffmpegLoading = false;
     ffmpeg = null;
@@ -58,16 +55,41 @@ const FORMAT_ARGS = {
   OGG_FROM_VIDEO: { ext: "ogg", args: ["-vn", "-c:a", "libvorbis", "-q:a", "4"] },
   AAC_FROM_VIDEO: { ext: "aac", args: ["-vn", "-c:a", "aac", "-b:a", "192k"] },
   GIF: { ext: "gif", args: ["-vf", "fps=10,scale=480:-1:flags=lanczos", "-loop", "0"] },
+  FLAC: { ext: "flac", args: ["-c:a", "flac"] },
+  FLAC_FROM_VIDEO: { ext: "flac", args: ["-vn", "-c:a", "flac"] },
 };
 
-export async function convertMedia(file, targetFmt, onProgress) {
+// options: { startTime (seconds), endTime (seconds), gifFps, gifWidth }
+export async function convertMedia(file, targetFmt, onProgress, options = {}) {
   const isVideoToAudio =
-    file.type.startsWith("video/") && ["MP3", "WAV", "OGG", "AAC"].includes(targetFmt);
+    file.type.startsWith("video/") && ["MP3", "WAV", "OGG", "AAC", "FLAC"].includes(targetFmt);
 
   const formatKey = isVideoToAudio ? `${targetFmt}_FROM_VIDEO` : targetFmt;
-  const config = FORMAT_ARGS[formatKey] || FORMAT_ARGS[targetFmt];
-
+  let config = { ...FORMAT_ARGS[formatKey] || FORMAT_ARGS[targetFmt] };
   if (!config) throw new Error(`Unsupported conversion: ${targetFmt}`);
+
+  // Build ffmpeg args
+  let inputArgs = [];
+  let outputArgs = [...config.args];
+
+  // GIF clip options — start/end time + optional fps/width
+  if (targetFmt === "GIF") {
+    const fps = options.gifFps || 10;
+    const width = options.gifWidth || 480;
+    outputArgs = ["-vf", `fps=${fps},scale=${width}:-1:flags=lanczos`, "-loop", "0"];
+
+    if (options.startTime != null && options.endTime != null) {
+      const duration = options.endTime - options.startTime;
+      // -ss before -i = fast seek, -t = duration
+      inputArgs = ["-ss", String(options.startTime), "-t", String(duration)];
+    }
+  }
+
+  // Trim support for other formats too
+  if (targetFmt !== "GIF" && options.startTime != null && options.endTime != null) {
+    const duration = options.endTime - options.startTime;
+    inputArgs = ["-ss", String(options.startTime), "-t", String(duration)];
+  }
 
   onProgress?.(5);
   const ff = await getFFmpeg(onProgress);
@@ -81,26 +103,25 @@ export async function convertMedia(file, targetFmt, onProgress) {
     await ff.writeFile(inputName, await fetchFile(file));
     onProgress?.(35);
 
-    await ff.exec(["-i", inputName, ...config.args, outputName]);
+    // Final command: ffmpeg [inputArgs] -i input [outputArgs] output
+    await ff.exec([...inputArgs, "-i", inputName, ...outputArgs, outputName]);
     onProgress?.(85);
 
     const data = await ff.readFile(outputName);
     onProgress?.(95);
 
-    // Cleanup virtual FS
     try { await ff.deleteFile(inputName); } catch {}
     try { await ff.deleteFile(outputName); } catch {}
 
     const mimeMap = {
       mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg",
-      aac: "audio/aac", mp4: "video/mp4", webm: "video/webm", gif: "image/gif",
+      aac: "audio/aac", flac: "audio/flac", mp4: "video/mp4", webm: "video/webm", gif: "image/gif",
     };
 
     const blob = new Blob([data.buffer], { type: mimeMap[config.ext] || "application/octet-stream" });
     return { blob, ext: config.ext };
 
   } catch (err) {
-    // Cleanup on error
     try { await ff.deleteFile(inputName); } catch {}
     try { await ff.deleteFile(outputName); } catch {}
     throw new Error(err.message || "Conversion failed. Please try again.");

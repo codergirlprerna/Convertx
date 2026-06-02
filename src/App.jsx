@@ -269,13 +269,14 @@ export default function App() {
       const type = detectType(file);
       if (file.size > MAX_BYTES) return { id: `${Date.now()}-${Math.random()}`, file, type, targetFmt: null, status: "error", error: `File too large — max ${MAX_MB}MB. This file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`, progress: 0, downloadUrl: null, downloadName: null };
       if (!type) return { id: `${Date.now()}-${Math.random()}`, file, type: null, targetFmt: null, status: "error", error: `Sorry, .${file.name.split(".").pop()} files aren't supported yet`, progress: 0, downloadUrl: null, downloadName: null };
-      return { id: `${Date.now()}-${Math.random()}`, file, type, targetFmt: FORMAT_MAP[type].outputs[0], status: "idle", error: null, progress: 0, downloadUrl: null, downloadName: null };
+      return { id: `${Date.now()}-${Math.random()}`, file, type, targetFmt: FORMAT_MAP[type].outputs[0], status: "idle", error: null, progress: 0, downloadUrl: null, downloadName: null, mediaOptions: {} };
     });
     setFiles((f) => [...f, ...newItems]);
   }, []);
 
   const removeFile = (id) => setFiles((f) => f.filter((x) => x.id !== id));
   const setFormat = (id, fmt) => setFiles((f) => f.map((x) => x.id === id ? { ...x, targetFmt: fmt } : x));
+  const setMediaOptions = (id, opts) => setFiles((f) => f.map((x) => x.id === id ? { ...x, mediaOptions: opts } : x));
   const updateFile = (id, updates) => setFiles((f) => f.map((x) => x.id === id ? { ...x, ...updates } : x));
 
   const convertFile = async (id, imgOptions = {}) => {
@@ -301,7 +302,7 @@ export default function App() {
         updateFile(id, { progress: 90 });
       } else {
         updateFile(id, { status: "converting", progress: 10 });
-        const r = await convertMedia(item.file, fmt, (p) => updateFile(id, { progress: p }));
+        const r = await convertMedia(item.file, fmt, (p) => updateFile(id, { progress: p }), imgOptions);
         blob = r.blob; ext = r.ext;
       }
       const url = URL.createObjectURL(blob);
@@ -319,7 +320,7 @@ export default function App() {
     }
   };
 
-  const convertAll = () => files.filter((x) => x.status === "idle" && x.targetFmt).forEach((x) => convertFile(x.id, {}));
+  const convertAll = () => files.filter((x) => x.status === "idle" && x.targetFmt).forEach((x) => convertFile(x.id, x.mediaOptions || {}));
   const hasIdle = files.some((x) => x.status === "idle" && x.targetFmt);
   const doneFiles = files.filter((x) => x.status === "done" && x.downloadUrl);
 
@@ -428,6 +429,7 @@ export default function App() {
                 )}
                 {files.map((item) => (
                   <FileCard key={item.id} item={item} onRemove={removeFile} onFormatChange={setFormat} onConvert={convertFile}
+                    onOptionsChange={(opts) => setMediaOptions(item.id, opts)}
                     onShare={(f) => setShareFile({ ...f, downloadUrl: item.downloadUrl, downloadName: item.downloadName, type: item.type })}
                   />
                 ))}

@@ -57,9 +57,9 @@ function Preview({ item }) {
 
 function TextPreview({ url, ext }) {
   const [content, setContent] = useState(null);
-  if (content === null) {
-    fetch(url).then(r => r.text()).then(t => setContent(t.slice(0, 800)));
-  }
+  useEffect(() => {
+    fetch(url).then(r => r.text()).then(t => setContent(t.slice(0, 800))).catch(() => setContent("(preview unavailable)"));
+  }, [url]);
   const colorMap = { json: "#818cf8", html: "#38bdf8", csv: "#00d4aa", md: "#a3e635", txt: "#94a3b8" };
   const color = colorMap[ext] || "#94a3b8";
   return (
@@ -148,13 +148,158 @@ function ImageOptions({ options, onChange, originalWidth, originalHeight, target
   );
 }
 
+
+// ── GIF Clip Selector ──────────────────────────────────────────────────────
+function GifOptions({ options, onChange, videoDuration, videoUrl }) {
+  const accent = "#f43f5e";
+  const start = options.startTime ?? 0;
+  const end = options.endTime ?? Math.min(videoDuration || 10, 10);
+  const clipDuration = (end - start).toFixed(1);
+
+  const fmt = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  // Parse "m:ss" or plain seconds string → float seconds
+  const parseTime = (str, fallback) => {
+    if (!str) return fallback;
+    if (str.includes(":")) {
+      const [m, s] = str.split(":").map(Number);
+      return isNaN(m) || isNaN(s) ? fallback : m * 60 + s;
+    }
+    const n = parseFloat(str);
+    return isNaN(n) ? fallback : n;
+  };
+
+  const maxDur = videoDuration || 60;
+
+  return (
+    <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(244,63,94,0.04)", border: "1px solid rgba(244,63,94,0.15)" }}>
+      <div style={{ fontSize: 11, color: accent, fontFamily: "var(--font-heading)", fontWeight: 600, marginBottom: 10, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+        🎬 GIF Clip Options
+      </div>
+
+      {/* Video preview */}
+      {videoUrl && (
+        <video src={videoUrl} controls style={{ width: "100%", borderRadius: 8, maxHeight: 140, marginBottom: 10, background: "#000" }} />
+      )}
+
+      {/* Start time — slider + manual input */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+          <label style={{ fontSize: 10.5, color: "var(--text-muted)", fontFamily: "var(--font-heading)" }}>Start time</label>
+          <input
+            type="text"
+            value={fmt(start)}
+            onChange={e => {
+              const val = Math.max(0, Math.min(parseTime(e.target.value, start), maxDur - 1));
+              onChange({ ...options, startTime: val, endTime: Math.max(end, val + 1) });
+            }}
+            placeholder="0:00"
+            style={{
+              width: 56, padding: "3px 7px", borderRadius: 6, textAlign: "center",
+              background: "rgba(255,255,255,0.07)", border: `1px solid ${accent}44`,
+              color: accent, fontSize: 12, fontFamily: "var(--font-heading)", fontWeight: 600,
+              outline: "none",
+            }}
+          />
+        </div>
+        <input type="range" min="0" max={maxDur} step="0.1"
+          value={start}
+          onChange={e => {
+            const val = parseFloat(e.target.value);
+            onChange({ ...options, startTime: val, endTime: Math.max(end, val + 1) });
+          }}
+          style={{ width: "100%", accentColor: accent, cursor: "pointer" }}
+        />
+      </div>
+
+      {/* End time — slider + manual input */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+          <label style={{ fontSize: 10.5, color: "var(--text-muted)", fontFamily: "var(--font-heading)" }}>End time</label>
+          <input
+            type="text"
+            value={fmt(end)}
+            onChange={e => {
+              const val = Math.max(0, Math.min(parseTime(e.target.value, end), maxDur));
+              onChange({ ...options, endTime: val, startTime: Math.min(start, val - 1) });
+            }}
+            placeholder="0:10"
+            style={{
+              width: 56, padding: "3px 7px", borderRadius: 6, textAlign: "center",
+              background: "rgba(255,255,255,0.07)", border: `1px solid ${accent}44`,
+              color: accent, fontSize: 12, fontFamily: "var(--font-heading)", fontWeight: 600,
+              outline: "none",
+            }}
+          />
+        </div>
+        <input type="range" min="0" max={maxDur} step="0.1"
+          value={end}
+          onChange={e => {
+            const val = parseFloat(e.target.value);
+            onChange({ ...options, endTime: val, startTime: Math.min(start, val - 1) });
+          }}
+          style={{ width: "100%", accentColor: accent, cursor: "pointer" }}
+        />
+      </div>
+
+      {/* GIF quality settings */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+        <div>
+          <label style={{ fontSize: 10.5, color: "var(--text-muted)", fontFamily: "var(--font-heading)", display: "block", marginBottom: 4 }}>FPS</label>
+          <select value={options.gifFps || 10}
+            onChange={e => onChange({ ...options, gifFps: parseInt(e.target.value) })}
+            style={{ width: "100%", padding: "6px 8px", borderRadius: 7, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--text-primary)", fontSize: 12, fontFamily: "var(--font-heading)" }}>
+            <option value={6}>6 fps (smaller)</option>
+            <option value={10}>10 fps (default)</option>
+            <option value={15}>15 fps (smoother)</option>
+            <option value={24}>24 fps (large)</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize: 10.5, color: "var(--text-muted)", fontFamily: "var(--font-heading)", display: "block", marginBottom: 4 }}>Width</label>
+          <select value={options.gifWidth || 480}
+            onChange={e => onChange({ ...options, gifWidth: parseInt(e.target.value) })}
+            style={{ width: "100%", padding: "6px 8px", borderRadius: 7, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--text-primary)", fontSize: 12, fontFamily: "var(--font-heading)" }}>
+            <option value={320}>320px (small)</option>
+            <option value={480}>480px (default)</option>
+            <option value={640}>640px (large)</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Clip duration info */}
+      <div style={{ fontSize: 11, color: "var(--text-muted)", padding: "6px 10px", borderRadius: 7, background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+        ⏱ Clip duration: <strong style={{ color: accent }}>{clipDuration}s</strong>
+        {parseFloat(clipDuration) > 15 && (
+          <span style={{ color: "#f59e0b", marginLeft: 8 }}>⚠ Long GIFs can be very large. Keep under 10s for best results.</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── FileCard ───────────────────────────────────────────────────────────────
-export default function FileCard({ item, onRemove, onFormatChange, onConvert, onShare }) {
+export default function FileCard({ item, onRemove, onFormatChange, onConvert, onShare, onOptionsChange }) {
   const cfg = FORMAT_MAP[item.type] || {};
   const progress = item.progress ?? 0;
-  const [imgOptions, setImgOptions] = useState({ quality: 92, width: null, height: null });
+  const [imgOptions, setImgOptions] = useState({ quality: 85, width: null, height: null, startTime: null, endTime: null, gifFps: 10, gifWidth: 480 });
+  const handleOptionsChange = (opts) => {
+    setImgOptions(opts);
+    onOptionsChange?.(opts);
+  };
   const [showOptions, setShowOptions] = useState(false);
   const [imgDimensions, setImgDimensions] = useState({ w: null, h: null });
+  const [videoDuration, setVideoDuration] = useState(null);
+  const [videoUrl] = useState(() => item.type === "video" ? URL.createObjectURL(item.file) : null);
+
+  // Revoke videoUrl on unmount to prevent memory leak
+  useEffect(() => {
+    return () => { if (videoUrl) URL.revokeObjectURL(videoUrl); };
+  }, [videoUrl]);
 
   const statusColor =
     item.status === "done"  ? "#00d4aa" :
@@ -176,6 +321,18 @@ export default function FileCard({ item, onRemove, onFormatChange, onConvert, on
     img.onerror = () => URL.revokeObjectURL(url);
     img.src = url;
   }, [item.file, isImageType]);
+
+  // Load video duration
+  const isVideoType = item.type === "video";
+  useEffect(() => {
+    if (!isVideoType || !videoUrl) return;
+    const vid = document.createElement("video");
+    vid.onloadedmetadata = () => {
+      setVideoDuration(vid.duration);
+      setImgOptions(o => ({ ...o, endTime: Math.min(vid.duration, 10) }));
+    };
+    vid.src = videoUrl;
+  }, [isVideoType, videoUrl]);
 
   return (
     <div style={{
@@ -217,6 +374,18 @@ export default function FileCard({ item, onRemove, onFormatChange, onConvert, on
               <span style={{ color: "#00d4aa", marginLeft: 6 }}>→ {item.targetFmt}</span>
             )}
           </div>
+          {/* SVG warning */}
+          {item.file.name.toLowerCase().endsWith(".svg") && item.status === "idle" && (
+            <div style={{ fontSize: 10.5, color: "#f59e0b", marginTop: 2 }}>
+              ⚠ SVG rendering may vary across browsers. Complex SVGs might not convert perfectly.
+            </div>
+          )}
+          {/* Animated GIF warning */}
+          {item.file.name.toLowerCase().endsWith(".gif") && item.status === "idle" && (
+            <div style={{ fontSize: 10.5, color: "#f59e0b", marginTop: 2 }}>
+              ⚠ Animated GIFs lose animation on conversion — only the first frame will be used.
+            </div>
+          )}
         </div>
         <button className="remove-btn" onClick={() => onRemove(item.id)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 15, padding: "3px 6px", lineHeight: 1 }}>✕</button>
       </div>
@@ -241,35 +410,46 @@ export default function FileCard({ item, onRemove, onFormatChange, onConvert, on
 
       {/* Image options toggle */}
       {isImageType && item.status === "idle" && (
-        <button
-          onClick={() => setShowOptions(s => !s)}
-          style={{
-            alignSelf: "flex-start", padding: "4px 12px", borderRadius: 8,
-            border: `1px solid ${showOptions ? "rgba(0,212,170,0.4)" : "rgba(255,255,255,0.09)"}`,
-            background: showOptions ? "rgba(0,212,170,0.08)" : "transparent",
-            color: showOptions ? "#00d4aa" : "var(--text-secondary)",
-            fontSize: 11, fontFamily: "var(--font-heading)", fontWeight: 600,
-            cursor: "pointer", transition: "all 0.15s",
-          }}
-        >
+        <button onClick={() => setShowOptions(s => !s)} style={{
+          alignSelf: "flex-start", padding: "4px 12px", borderRadius: 8,
+          border: `1px solid ${showOptions ? "rgba(0,212,170,0.4)" : "rgba(255,255,255,0.09)"}`,
+          background: showOptions ? "rgba(0,212,170,0.08)" : "transparent",
+          color: showOptions ? "#00d4aa" : "var(--text-secondary)",
+          fontSize: 11, fontFamily: "var(--font-heading)", fontWeight: 600,
+          cursor: "pointer", transition: "all 0.15s",
+        }}>
           ⚙ {showOptions ? "Hide Options" : "Resize / Quality"}
         </button>
       )}
 
       {/* Image options panel */}
       {isImageType && item.status === "idle" && showOptions && (
-        <ImageOptions
-          options={imgOptions}
-          onChange={setImgOptions}
-          originalWidth={imgDimensions.w}
-          originalHeight={imgDimensions.h}
+        <ImageOptions options={imgOptions} onChange={handleOptionsChange}
+          originalWidth={imgDimensions.w} originalHeight={imgDimensions.h}
           targetFmt={item.targetFmt}
         />
       )}
 
+      {/* GIF clip selector — show when video → GIF */}
+      {isVideoType && item.targetFmt === "GIF" && item.status === "idle" && (
+        <GifOptions
+          options={imgOptions}
+          onChange={handleOptionsChange}
+          videoDuration={videoDuration}
+          videoUrl={videoUrl}
+        />
+      )}
+
+      {/* GIF hint when video format changes away from GIF */}
+      {isVideoType && item.targetFmt !== "GIF" && item.status === "idle" && (
+        <div style={{ fontSize: 11, color: "var(--text-muted)", padding: "6px 10px", borderRadius: 7, background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+          💡 Select <strong style={{ color: "#f43f5e" }}>GIF</strong> as output format to get clip selector with start/end time controls.
+        </div>
+      )}
+
       {/* Convert button */}
       {item.status === "idle" && item.targetFmt && (
-        <button className="convert-btn" onClick={() => onConvert(item.id, isImageType ? imgOptions : {})} style={{
+        <button className="convert-btn" onClick={() => onConvert(item.id, (isImageType || isVideoType) ? imgOptions : {})} style={{
           padding: "9px 22px", borderRadius: 10, border: "none",
           cursor: "pointer", alignSelf: "flex-start",
           background: `linear-gradient(135deg, ${cfg.color}, ${cfg.color}cc)`,
@@ -352,7 +532,7 @@ export default function FileCard({ item, onRemove, onFormatChange, onConvert, on
       {item.status === "error" && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div style={{ color: "#f43f5e", fontSize: 12, fontFamily: "var(--font-heading)" }}>⚠ {item.error}</div>
-          <button onClick={() => onConvert(item.id, isImageType ? imgOptions : {})} style={{
+          <button onClick={() => onConvert(item.id, (isImageType || isVideoType) ? imgOptions : {})} style={{
             padding: "5px 14px", borderRadius: 8, border: "1px solid rgba(244,63,94,0.3)",
             background: "rgba(244,63,94,0.08)", color: "#f43f5e",
             fontSize: 11, fontFamily: "var(--font-heading)", fontWeight: 600, cursor: "pointer",
